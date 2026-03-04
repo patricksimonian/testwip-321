@@ -1,0 +1,48 @@
+name: Reusable GCP Auth
+on:
+  workflow_dispatch:
+    inputs:
+      project_number:
+        type: string
+        default: '269327519034'
+      pool_id:
+        type: string
+        default: 'github-pool'
+      provider_id:
+        type: string
+        default: 'github-provider'
+      service_account:
+        type: string
+        default: 'testwif@kanda-dev-479823.iam.gserviceaccount.com'
+
+# Mandatory permissions for OIDC token exchange
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  authenticate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - id: 'auth'
+        name: 'Authenticate to Google Cloud'
+        uses: 'google-github-actions/auth@v2'
+        with:
+          workload_identity_provider: 'projects/${{ inputs.project_number }}/locations/global/workloadIdentityPools/${{ inputs.pool_id }}/providers/${{ inputs.provider_id }}'
+          service_account: '${{ inputs.service_account }}'
+      
+
+      - name: 'Set up Cloud SDK'
+        uses: 'google-github-actions/setup-gcloud@v2'
+
+      - name: 'Verify Identity'
+        run: |
+          gcloud auth list
+          # This confirms the 'patrick*' wildcard logic worked
+          gcloud config get-value project
+          echo "Credential Path: $GOOGLE_APPLICATION_CREDENTIALS"
+          # fail with 403
+          gcloud storage buckets list
